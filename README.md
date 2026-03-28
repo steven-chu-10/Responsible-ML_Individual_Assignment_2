@@ -3,6 +3,16 @@
 A continuation of the Lecture 1 COMPAS analysis, this notebook applies explainability and interpretability methods to a gradient-boosted tree model trained on the COMPAS recidivism dataset. SHAP values, LIME explanations, and DiCE counterfactuals are used to audit model behavior across racial groups.
  
 The analysis is part of Individual Homework 2 for DNSC 6330: Responsible Machine Learning at The George Washington University.
+
+## Table of Contents
+
+1. [AI Use Disclaimer](#ai-use-disclaimer)
+2. [Purpose](#purpose)
+3. [Libraries Used](#libraries-used)
+4. [How to Reproduce](#how-to-reproduce)
+5. [Analytical Pipeline](#analytical-pipeline)
+6. [Governance Memo](#governance-memo)
+7. [Notes on Method Limitations](#notes-on-method-limitations)
  
 ---
 
@@ -86,11 +96,22 @@ Dataset URL: https://raw.githubusercontent.com/propublica/compas-analysis/master
  
 ---
  
-## Key Findings
+## Key Findings/Governance Memo
  
-SHAP analysis confirms a persistent race signal in the model. Black defendants face a false positive rate of 0.367 compared to 0.104 for white defendants, and `race_African-American` consistently pushes individual predictions above the average even when race is not the top-ranked feature. This points to proxy discrimination through correlated features like `priors_count` rather than direct use of race.
- 
-DiCE counterfactuals did not require changes to immutable features, which is a positive finding. However the most common recourse recommendation for high-risk defendants was a large increase in age, which is not actionable. Counterfactual generation should be constrained to genuinely actionable features in any real deployment.
+This memo summarizes findings from an explainability audit of a gradient-boosted tree model trained on the COMPAS recidivism dataset. Three methods were applied: SHAP values, LIME, and DiCE counterfactuals. The goal was to assess whether the model's predictions are transparent, fair, and amenable to actionable recourse.
+
+What the Explanations Reveal
+
+SHAP analysis shows that days_b_screening_arrest, decile_score, and score_text are the strongest global predictors. Notably, race_African-American carries a small but consistent positive SHAP value across the test set, meaning being Black pushes predicted recidivism risk above average even after controlling for other features. This is consistent with the FPR disparity identified in the diagnostic analysis, where Black defendants faced a false positive rate of 0.367 compared to 0.104 for white defendants.
+LIME explanations for individual defendants were broadly consistent with SHAP on high-impact features like age and priors, but diverged on lower-ranked features. This divergence is expected given that LIME only guarantees local fidelity, but it means the two methods cannot be used interchangeably for individual-level recourse decisions.
+
+Counterfactual Analysis
+
+DiCE counterfactuals did not require changes to immutable features like race or sex to flip predictions, which is a positive finding. However, the most common recourse path for high-risk defendants was a large increase in age, sometimes to 69 or 70. This is not actionable. A defendant cannot change their age, making these counterfactuals technically valid but practically useless for recourse purposes.
+
+Recommendations
+
+First, constrain future counterfactual generation to genuinely actionable features only, excluding age and decile score. Second, the persistent race signal in SHAP values warrants a full proxy discrimination audit examining whether features like priors_count are encoding racial disparities from systemic over-policing. Third, explainability outputs should be reviewed on a rolling basis rather than treated as a one-time compliance exercise.
  
 ---
  
